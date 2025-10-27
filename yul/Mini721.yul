@@ -46,7 +46,7 @@ object "Mini721" {
   object "runtime" {
     code {
 
-      // dispatcher
+      // --- dispatcher ---
       switch selector() 
       case 0x40c10f19 /* mint(address, uint256) */ {
 
@@ -57,7 +57,7 @@ object "Mini721" {
 
       // --- external interactions ---
       function mint() {
-        // calldataload(4) to load at selector-offset
+        // calldataload(4) to load word beyond 4 byte selector
         // address is 160 bits => right shift 96 bits
         let to := shr(96, calldataload(4))
         if iszero(to) { revert(0x00, 0x00) } // no address found
@@ -71,21 +71,21 @@ object "Mini721" {
 
         // increment totalSupply
         sstore(totalSupplyPos(), add(id, 1))
+
+        // emit Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+        log4( // ❗ TODO: make generic function for emitting events
+            0x00, 0x00,   // no data payload
+            0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, // topic 0: signatureHash 
+            0,    // topic 1: newly minted nft => from = address(0) 
+            to,   // topic 2: mintedTo
+            id    // topic 3: tokenId
+        )
+        
       }
 
       // --- calldata ops ---
       function selector() -> s {
-        // discard all but 4 byte selector => right-shift 224 bits
-        s := shr(224, calldataload(0))
-      }
-
-      // --- access eval ---
-      function owner() -> o {
-        o := sload(0x00)
-      }
-
-      function callerIsOwner () -> owns {
-        owns := eq(caller(), owner())
+        s := shr(224, calldataload(0))  // discards all but 4 byte selector => right-shift 224 bits
       }
 
       // --- storage layout ---
@@ -97,10 +97,18 @@ object "Mini721" {
         pos := 0x10
       }
 
+      // --- access eval ---
+      function owner() -> o {
+        o := sload(0x00)
+      }
+
+      function callerIsOwner () -> owns {
+        owns := eq(caller(), owner())
+      }
+
       // --- utility ---
       function require(condition) {
-        // given condition is false => stop program
-        if iszero(condition) { revert(0x00, 0x00) }
+        if iszero(condition) { revert(0x00, 0x00) } // given condition is false => stop program
       }
     }
   }
