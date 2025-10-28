@@ -61,11 +61,11 @@ object "Mini721" {
         let to := shr(96, calldataload(4))
         if iszero(to) { revert(0x00, 0x00) } // no address found
 
-        // get storage slot
+        // load to-be tokenId + next available slot in owners mapping  
         let id := sload(totalSupplyPos())
         let slot := add(ownersBasePos(), id)
 
-        // write new owner
+        // write mini's new owner
         sstore(slot, to) 
 
         // increment totalSupply
