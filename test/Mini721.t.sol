@@ -16,18 +16,18 @@ contract Mini721Test is Test {
 
     function setUp() public {
         // copy storage -> memory
-        bytes memory bc = bytecode;
+        bytes memory creation = bytecode;
 
         assembly {
-            // memory slot 0x00 => 0x31F contains bc size
-            let size := mload(bc)
+            // memory slot 0x00 => 0x31F contains bc length
+            let size := mload(creation)
             // bc data 0x20 => bc.size
-            let ptr := add(bc, 0x20)
+            let ptr := add(creation, 0x20)
 
             // call create & save address returned from constructor
             let addr := create(0, ptr, size)
 
-            // revert if deployment faill
+            // revert if deployment failed
             if iszero(addr) { revert(0, 0) }
 
             // store the returned address in slot of `deployed`
@@ -40,14 +40,18 @@ contract Mini721Test is Test {
     // -----------------------
     // DEPLOYMENT
     // -----------------------
-    /*function test_RuntimeCodeIsDeployedCorrectly() external view {
-        // we need to get the bc stored in the world state...
-        // and we do this by fetching the bytecode and compare it to ours
-        assertTrue(true);
-        console.log(vm.toString(deployed.bc));
+    function test_RuntimeCodeIsDeployedCorrectly() external view {
+        bytes memory creation = bytecode;
 
-        assertContains()
-    }*/
+        uint256 pos = bytePosition(creation, bytes1(0xfe)); // 0xfe
+        bytes memory runtime = new bytes(creation.length - (pos + 1));
+
+        for (uint256 i = 0; i < runtime.length; i++) {
+            runtime[i] = creation[i + pos + 1];
+        }
+
+        assertEq(runtime, deployed.code);
+    }
 
     function test_OwnerIsSetToDeployer() external view {
         uint256 value = loadSlotValue(deployed, slotOwner);
@@ -77,10 +81,17 @@ contract Mini721Test is Test {
         return uint256(value);
     }
 
-    // to isolate the runtime from the creationcode
-    //  1. get the offset by getting the position of 0xf3 RETURN opcode
-    //  2.
-    function extractRuntime(bytes memory creation) internal pure returns (bytes memory) {
-        uint256 offset; // position of runtime
+    function bytePosition(bytes memory bc, bytes1 marker) internal pure returns (uint256) {
+        uint256 offset;
+        uint256 len = bc.length;
+
+        for (uint256 i; i < len; i++) {
+            if (bc[i] == marker) {
+                offset = i;
+                break;
+            }
+        }
+
+        return offset;
     }
 }
