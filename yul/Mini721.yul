@@ -8,9 +8,8 @@
   - Cannot be sold through marketplace, only minted and transferred.
 
   Storage layout:
-    0x00 - Owner of NFT contract
-    0x01 - TotalSupply
-    0x02 - BaseURI  
+    0x00 - TotalSupply
+    0x01 - BaseURI  
     -- some offset for future vars --
     0x10 - Base slot mapping tokenId => address
 
