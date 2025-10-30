@@ -7,11 +7,10 @@ import {console} from "forge-std/console.sol";
 contract Mini721Test is Test {
     // mini721's bytecode
     bytes bytecode =
-        hex"335f55607f600e5f39607f5ff3fe6005606d565b636a627842146012575f80fd5b601e60043560601c6020565b005b8015606957602b6075565b549080826035607a565b01556001820160416075565b555f7fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef8180a4565b5f80fd5b5f3560e01c90565b600190565b60109056";
+        hex"607e600b5f39607e5ff3fe6005606d565b636a627842146012575f80fd5b601e60043560601c6020565b005b8015606957602b6075565b5490808260356079565b01556001820160416075565b555f7fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef8180a4565b5f80fd5b5f3560e01c90565b5f90565b60109056";
 
     // mini's storage memory layout
-    uint256 slotOwner = 0x00;
-    uint256 slotTotalSupply = 0x01;
+    uint256 slotTotalSupply = 0x00;
 
     address deployed;
 
@@ -114,7 +113,6 @@ contract Mini721Test is Test {
         assertTrue(logIndex >= 0, "Transfer event not found in logs!");
     }
 
-    // since address(this) mints in all the other 
     function test_MintUserCanMint() external {
         address user = makeAddr("user");
         vm.startPrank(user);
@@ -157,20 +155,25 @@ contract Mini721Test is Test {
     // -----------------------
 
     // --- external calls  ---
+
+    /// Calls Mini721 mint()
     function callMint(address to) internal returns (bool ok) {
         (ok,) = deployed.call(bytes.concat(hex"6a627842", bytes32(uint256(uint160(to)))));
     }
 
+    /// Calls Mini721 mint() and requires success
     function callMintStrict(address to) internal {
         bool ok = callMint(to);
         require(ok, "call failed");
     }
 
+    /// Loads value at `slot` for given account 
     function loadSlotValue(address account, uint256 slot) internal view returns (uint256) {
         bytes32 value = vm.load(account, bytes32(slot));
         return uint256(value);
     }
 
+    /// Loops through log entries and returns match's index if found / -1 if no match.
     function checkEventWasEmitted(Vm.Log[] memory entries, address emitter, bytes32 eventSignature)
         internal
         pure
@@ -181,7 +184,7 @@ contract Mini721Test is Test {
                 return int256(i);
             }
         }
-        return -1; // Return -1 if not found
+        return -1; 
     }
 
     // --- byte ops ---
