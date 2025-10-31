@@ -17,7 +17,7 @@ all: build
 build:
 	@echo "🛠️  Compiling $(YUL_FILE)..."
 	@mkdir -p $(OUT_DIR)
-	@solc --strict-assembly $(YUL_FILE) --bin > $(OUT_BIN)
+	@solc --strict-assembly $(YUL_FILE) --bin | tail -n 1 | tr -d '\n' | sed 's/^/0x/' > $(OUT_BIN)
 	@echo "✅  Yul build complete → $(OUT_BIN)"
 
 # ───────────────────────────────────────────────

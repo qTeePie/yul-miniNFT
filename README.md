@@ -16,6 +16,10 @@ cast send \
 
 ## Test the Mini with Foundry
 
+To deploy on anvil (private key of some of the prefilled anvil accounts).
+
 ```bash
-    mkdir -p data && solc --strict-assembly yul/Mini721.yul --bin > data/Mini721.bin
+make deploy \
+RPC_URL=http://127.0.0.1:8545 \
+PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 ```
