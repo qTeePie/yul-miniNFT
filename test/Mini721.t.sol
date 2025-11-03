@@ -6,8 +6,8 @@ import {console} from "forge-std/console.sol";
 
 contract Mini721Test is Test {
     // mini721's bytecode
-    bytes bytecode = // Why does my tests fail when i remove this when its not used anywher!?
-      hex"60fd61000c5f3960fd5ff3fe6007341560bc565b600d60ab565b80636a62784214603757806318160ddd1460335763c87b56dd14602e575f80fd5b5f60a0565b6092565b604360043560601c6045565b005b8015608e57605060b3565b54908082605a60b7565b015560018201606660b3565b555f7fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef8180a4565b5f80fd5b609860b3565b545f5260205ff35b603660c75f3960365ff35b5f3560e01c90565b5f90565b601090565b1560c257565b5f80fdfe697066733a2f2f516d527441364b717064344a624c676476574263545031774d446874334667566e6b5a7536675a4e506156505a672f";
+    uint256 whatTheHellWhyFailWhenRemove = // Why does my tests fail when i remove this when its not used anywhere!? 🔴🔴🔴
+        1; // i dont get it cuz in my setup i use deployed.slot!!! so the tests shouldnt be affected???
 
     address deployed;
 
@@ -18,6 +18,7 @@ contract Mini721Test is Test {
     bytes4 selectorMint = bytes4(keccak256("mint(address)"));
     bytes4 selectorTotalSupply = bytes4(keccak256("totalSupply()"));
     bytes4 selectorTokenURI = bytes4(keccak256("tokenURI(uint256)"));
+    bytes4 selectorSVG = bytes4(keccak256("svg()"));
 
     // -----------------------
     // SETUP
@@ -73,6 +74,16 @@ contract Mini721Test is Test {
             runtime[i] = creation[i + pos + 1];
         }
 
+        /*
+        console.log("--------------------------------------------------------------");
+        console.log("Runtime: ");
+        console.logBytes(deployed.code);
+        console.log("Creation: ");
+        console.logBytes(creation);
+        console.log("--------------------------------------------------------------");
+        */
+
+        assertEq(runtime, deployed.code, "runtime doesn't match!");
         assertEq(keccak256(runtime), keccak256(deployed.code), "runtime doesn't match!");
     }
 
@@ -84,14 +95,14 @@ contract Mini721Test is Test {
         assertEq(totalSupply, 0);
     }
 
-     function test_BaseURIStored() external {
+    function test_BaseURIStored() external {
         bytes memory tokenIdData = abi.encode(uint256(0)); // encode tokenId = 0
         bytes memory returnData = callMiniStrict(selectorTokenURI, tokenIdData);
-        
+
         // The return data is the raw bytes returned by your Yul contract
         console.log("Return data length:", returnData.length);
         console.logBytes(returnData);
-        
+
         // If you want to decode it as a string (assuming it's a URI)
         if (returnData.length > 0) {
             string memory uri = string(returnData);
@@ -172,12 +183,12 @@ contract Mini721Test is Test {
         while raw Yul `log` calls expose it directly.
     */
 
-    /** 
+    /**
      * @dev Mint emits an event with signature:
      *  0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
      *      = Transfer(address, address, uint256)
      */
-    function test_EventMintTransferTopicsAreCorrect() external {
+    function test_EventTransferTopicsAreCorrect() external {
         address from = address(0); // topic 1
         address to = address(this); // topic 2
         uint256 tokenId = loadSlotValue(deployed, slotTotalSupply); // topic 3
@@ -202,15 +213,21 @@ contract Mini721Test is Test {
         assertEq(actualTokenId, tokenId, "Topic 3 (tokenId) not set as expected in mint!");
     }
 
-    function test_MintStoresOwnerInCorrectSlot() external {
-        
-    }
-
     // -----------------------
     // STORAGE LAYOUT
     // -----------------------
-    
-    
+    function test_MintStoresOwnerInCorrectSlot() external {}
+
+    function test_DebugSVGRaw() external {
+        bytes memory ret = callMiniStrict(selectorSVG, "");
+
+        console.log("Raw length:", ret.length);
+        //console.log(vm.toString(ret)); // print only first 2 ABI words
+        console.logBytes(ret); // print only first 2 ABI words
+        uint256 pos = bytePosition(ret, 0);
+        console.log("First zero byte is: ", pos);
+    }
+
     // -----------------------
     // 🔧 PRIVATE HELPERS
     // -----------------------

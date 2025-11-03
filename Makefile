@@ -2,6 +2,9 @@
 #   Mini721 Makefile 
 # ───────────────────────────────────────────────
 
+# Variables
+include .env
+
 # paths
 YUL_FILE = yul/Mini721.yul
 OUT_DIR  = data
@@ -25,7 +28,7 @@ build:
 # ───────────────────────────────────────────────
 deploy: build
 	@echo "🚀 Deploying Mini721..."
-	@forge script $(SCRIPT) --rpc-url $$RPC_URL --private-key $$PRIVATE_KEY --broadcast
+	@forge script $(SCRIPT) --rpc-url $(RPC_URL) --private-key $(PRIVATE_KEY) --broadcast
 	@echo "✨ Deployment finished!"
 
 # ───────────────────────────────────────────────
