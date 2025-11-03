@@ -97,7 +97,7 @@ contract BUGGY_Mini721Test is Test {
     // -----------------------
     // JUST TO MAKE IT RUN SETUP FAILS / NOT FAILS MYSTERIOUSLY
     // -----------------------
-    function test_TotalSupplyStartsAtZero() external view {
+    function test_SOMETHING() external view {
         assertTrue(true);
     }
 

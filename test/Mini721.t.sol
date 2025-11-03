@@ -212,10 +212,9 @@ contract Mini721Test is Test {
         bytes memory ret = callMiniStrict(selectorSVG, "");
 
         console.log("Raw length:", ret.length);
-        //console.log(vm.toString(ret)); // print only first 2 ABI words
         console.logBytes(ret); // print only first 2 ABI words
+
         uint256 pos = bytePosition(ret, 0);
-        console.log("First zero byte is: ", pos);
     }
 
     // -----------------------
@@ -285,5 +284,19 @@ contract Mini721Test is Test {
         }
 
         return offset;
+    }
+
+    function countSequentialBytes(bytes memory bc, bytes1 marker) internal pure returns (uint256) {
+        uint256 pos = bytePosition(bc, marker);
+
+        uint256 i = pos;
+        uint256 counter = 0;
+
+        while (bc[i] == marker) {
+            counter++;
+            i++;
+        }
+
+        return counter;
     }
 }
