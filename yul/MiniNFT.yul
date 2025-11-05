@@ -1,7 +1,7 @@
 /*
-  ❕ Note: this implementation favors gas savings over full ERC-721 compatibility.
+  ❕ Note: this implementation **DOES NOT** follow the ERC-721 standard.
 
-  To-the-bone minimal nft implemented in yul (evm ecducational lab, not commercial)
+  This is a demo for learning purposes, 
 
   - Free-mint NFT.
   - No max supply. 
@@ -28,9 +28,9 @@
 
 //  [  2 bit color   |      94 bits empty     |   160 bits address   ] 
 
-object "Mini721" {
+object "MiniNFT" {
 
-  // top `code` block is the constructor for Mini721
+  // top `code` block is the constructor for MiniNFT
   // the constructor copies `runtime` bytecode into memory and returns this memory segment to the EVM 
   // EVM hashes bytecode and saves hash as account object's `codeHash` in the World State
   // the actual bytecode is stored in some read-only "code database" hosted on each node seperate from main execution layer

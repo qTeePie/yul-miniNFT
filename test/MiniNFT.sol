@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 
-contract Mini721Test is Test {
+contract MiniNFTTest is Test {
     address deployed;
 
     // storage memory layout
@@ -27,7 +27,7 @@ contract Mini721Test is Test {
      *  to make sure the constructor actually returned the correct runtime segment.
      */
     function setUp() public {
-        string memory path = "./data/Mini721.bin";
+        string memory path = "./data/MiniNFT.bin";
         string memory data = vm.readFile(path);
         bytes memory creation = vm.parseBytes(data);
 

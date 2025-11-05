@@ -1,16 +1,15 @@
 # ───────────────────────────────────────────────
-#   Mini721 Makefile 
+#   MiniNFT Makefile 
 # ───────────────────────────────────────────────
 
 # Variables
 include .env
-export
 
 # paths
-YUL_FILE = yul/Mini721.yul
+YUL_FILE = yul/MiniNFT.yul
 OUT_DIR  = data
-OUT_BIN  = $(OUT_DIR)/Mini721.bin
-SCRIPT   = script/DeployMini721.s.sol
+OUT_BIN  = $(OUT_DIR)/MiniNFT.bin
+SCRIPT   = script/DeployMiniNFT.s.sol
 
 # default target
 all: build
@@ -28,7 +27,7 @@ build:
 #  DEPLOY: run Foundry deploy script
 # ───────────────────────────────────────────────
 deploy: build
-	@echo "🚀 Deploying Mini721..."
+	@echo "🚀 Deploying MiniNFT..."
 	@forge script $(SCRIPT) --rpc-url $(RPC_URL) --private-key $(PRIVATE_KEY) --broadcast
 	@echo "✨ Deployment finished!"
 
@@ -37,11 +36,11 @@ deploy: build
 # ───────────────────────────────────────────────
 mint:
 	@echo "🎨 Mintinf NFT..."
-	@cast send ${CONTRACT_ADDR} "mint(address)" ${USER_ADDR} --private-key ${PRIVATE_KEY} --rpc-url ${RPC_URL}
+	@cast send $(CONTRACT_ADDR) "mint(address)" $(USER_ADDR) --private-key $(PRIVATE_KEY) --rpc-url $(RPC_URL)
 
 totalSupply:
 	@echo "🔢 Fetching Total Supply..."
-	@cast call ${CONTRACT_ADDR} "totalSupply()" --rpc-url ${RPC_URL}
+	@cast call $(CONTRACT_ADDR) "totalSupply()" --rpc-url $(RPC_URL)
 
 # ───────────────────────────────────────────────
 #  FORK ANVIL

@@ -3,9 +3,9 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
 
-contract DeployMini721 is Script {
+contract DeployMiniNFT is Script {
     function run() external {
-        string memory path = "./data/Mini721.bin";
+        string memory path = "./data/MiniNFT.bin";
         string memory data = vm.readFile(path);
         bytes memory bytecode = vm.parseBytes(data);
 
@@ -17,6 +17,6 @@ contract DeployMini721 is Script {
         }
         vm.stopBroadcast();
 
-        console2.log("Mini721 deployed at:", deployed);
+        console2.log("MiniNFT deployed at:", deployed);
     }
 }

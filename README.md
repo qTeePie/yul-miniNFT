@@ -1,34 +1,57 @@
-# Mini721 🐥
+# MiniNFT 🐥
 
-I wanted to understand the EVM on an opcode level and found that implementing an ultra-minimal ERC721 was a fun way to do exactly that. 🚀
+**⚠️ DISCLAIMER: This NFT is only for educational purposes only. It is not ERC-721 compliant, not production-ready, and not intended for wallet or marketplace support**
+
+I wanted to understand the EVM on an opcode level and found that implementing an NFT was a fun way to do exactly that. 🚀
+
+This NFT is not ERC-721 compliant, but it is a non-fungable token. Some educational stuff like bitpacking NFT specs into the `ownerOf` mapping makes this NFT implementation kind of wild, perfect for _play and learn_.
+
+✅ It **mints**, **tracks ownership**, and **emits events**
+❌ It does **not follow the ERC-721 spec**
+🎯 It exists purely as a playground to learn low-level EVM, storage, and gas behavior
 
 ---
 
-## Deploy Mini on Anvil
+## 🖼️ Extract the on-chain SVG
 
 ```bash
-cast send \
---rpc-url http://127.0.0.1:8545 \
---private-key 0xYOURPRIVATEKEY \
---legacy \
---create "0x335f55601c600e5f39601c5ff3fe60056014565b6340c10f19146012575f80fd5b005b5f3560e01c9056"
+cast call <CONTRACT_ADDRESS> "svg()" \
+  --rpc-url http://127.0.0.1:8545 \
+  | cast --to-ascii > output.svg
 ```
 
-## Test the Mini with Foundry
+Now open `output.svg` in any browser or image viewer.
 
-To deploy on anvil (private key of some of the prefilled anvil accounts).
+---
 
-```bash
-make deploy \
-RPC_URL=http://127.0.0.1:8545 \
-PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+## 🛠 Available Make Commands
+
+| Command            | Description                                            |
+| ------------------ | ------------------------------------------------------ |
+| `make build`       | Compile the Yul contract → outputs raw bytecode (.bin) |
+| `make deploy`      | Deploy via Foundry script (`DeployMini721.s.sol`)      |
+| `make mint`        | Mint a token to `USER_ADDR` (from `.env`)              |
+| `make totalSupply` | Read the on-chain total supply                         |
+| `make fork-anvil`  | Start an Anvil mainnet fork (for testing)              |
+| `make clean`       | Remove build artifacts                                 |
+
+✅ All variables (`RPC_URL`, `PRIVATE_KEY`, `CONTRACT_ADDR`, `USER_ADDR`, etc.) are loaded from `.env`.
+
+---
+
+### If `.env` already has everything:
+
+```
+RPC_URL=http://127.0.0.1:8545
+PRIVATE_KEY=0x...
+CONTRACT_ADDR=0x...
+USER_ADDR=0x...
 ```
 
-## Reading the SVG output with foundry
-
-```bash
-cast call <CONTRACT_ADDRESS> "svg()" --rpc-url http://localhost:8545 | cast --to-ascii > output.svg
+then you can just run:
 
 ```
-
-Change from anvil if you're not in local dev.
+make deploy
+make mint
+make totalSupply
+```
