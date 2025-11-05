@@ -1,5 +1,7 @@
 ### ⚠️ Foundry Quirk / Bug Note: The “Useless Variable That Fixes Everything” Mystery
 
+**Storage slot references inside assembly are unsafe until the variable has been written to at least once by Solidity.**
+
 During testing, I ran into a **completely non-intuitive Foundry behavior**:
 
 ✅ My Yul contract deployed correctly

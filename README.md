@@ -23,3 +23,12 @@ make deploy \
 RPC_URL=http://127.0.0.1:8545 \
 PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 ```
+
+## Reading the SVG output with foundry
+
+```bash
+cast call <CONTRACT_ADDRESS> "svg()" --rpc-url http://localhost:8545 | cast --to-ascii > output.svg
+
+```
+
+Change from anvil if you're not in local dev.
