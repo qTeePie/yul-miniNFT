@@ -15,7 +15,7 @@
     
   0x00 - TotalSupply
   
-  0x10 - Holders Base
+  0x10 - Owners Base
     TokenId N is stored at (0x10 + N)
     Not real mapping layout - a simplified, linear style mapping 
     Used on purpose to demonstrate how it differs from a real-life mapping like balances
@@ -97,9 +97,9 @@ object "MiniNFT" {
 
         // next tokenId = supply + 1 (not allowing tokenId 0)  
         let id := add(supply, 1)
-        let slot := add(holdersBaseSlot(), id)
+        let slot := add(ownersBaseSlot(), id)
 
-        // write new holder to mapping
+        // write new owner to mapping
         sstore(slot, to)
 
         // increment totalSupply
@@ -124,7 +124,7 @@ object "MiniNFT" {
       function ownerOf(tokenId){
         if iszero(tokenId) { revert(0x00, 0x00) } 
         
-        let slot := add(holdersBaseSlot(), tokenId)
+        let slot := add(ownersBaseSlot(), tokenId)
         let owner := sload(slot)
 
         mstore(0x00, owner)
@@ -196,7 +196,7 @@ object "MiniNFT" {
         slot := 0x00
       }
 
-      function holdersBaseSlot() -> slot {
+      function ownersBaseSlot() -> slot {
         slot := 0x10
       }
 
