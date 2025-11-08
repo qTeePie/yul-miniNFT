@@ -9,7 +9,7 @@ contract MiniNFTTest is Test {
 
     // storage memory layout
     uint256 slotTotalSupply = 0x00;
-    uint256 slotBaseOwners = 0x10;
+    uint256 slotOwnersBase = 0x10;
 
     // write actions
     bytes4 selectorMint = bytes4(keccak256("mint(address)"));
@@ -17,7 +17,7 @@ contract MiniNFTTest is Test {
     // read actions
     bytes4 selectorSVG = bytes4(keccak256("svg(uint256)"));
     bytes4 selectorOwnerOf = bytes4(keccak256("ownerOf(uint256)"));
-    bytes4 selectorBalanceof = bytes4(keccak256("balanceOf(address)"));
+    bytes4 selectorBalanceOf = bytes4(keccak256("balanceOf(address)"));
     bytes4 selectorTotalSupply = bytes4(keccak256("totalSupply()"));
 
     // -----------------------
@@ -117,6 +117,24 @@ contract MiniNFTTest is Test {
         assertEq(supplyAfter, supplyBefore + 1, "mint didn't increment total supply!");
     }
 
+    function test_Mint_IncrementsBalanceOfReceiver() external {
+        address receiver = address(this);
+        bytes memory receiverEncoded = abi.encode(receiver);
+
+         uint256 balanceBefore = abi.decode(
+            callMiniStrict(selectorBalanceOf, receiverEncoded),
+            (uint256)
+        );
+        callMiniStrict(selectorMint, receiverEncoded);
+        
+        uint256 balanceAfter = abi.decode(
+            callMiniStrict(selectorBalanceOf, receiverEncoded),
+            (uint256)
+        );
+
+        assertEq(balanceBefore + 1, balanceAfter, "mint didn't increment receiver balance!");
+    }
+
     function test_Mint_EmitsTransferEvent() external {
         bytes32 sig = keccak256("Transfer(address,address,uint256)");
 
@@ -206,15 +224,27 @@ contract MiniNFTTest is Test {
     function test_Mint_StoresOwnerInCorrectSlot() external {
         address to = address(this);
         callMiniStrict(selectorMint, abi.encode(to));
-        
-        uint256 tokenId = loadSlotValue(deployed, slotTotalSupply); 
+
+        uint256 tokenId = loadSlotValue(deployed, slotTotalSupply);
 
         bytes memory ret = callMiniStrict(selectorOwnerOf, abi.encode(tokenId));
         require(ret.length <= 32, "unexpected returndata size");
 
         address actualOwner = abi.decode(ret, (address));
-        assertEq(actualOwner, to, "actualOwner mismatch");
+        assertEq(actualOwner, to, "owner mismatch");
     }
+
+    // -----------------------
+    // Balance Of
+    // -----------------------
+    function test_BalanceOf_ReturnsZeroForUnmintedAddress() external {}
+
+    function test_BalanceOf_IncrementsAfterMint() external {}
+
+    // -----------------------
+    // Owner Of
+    // -----------------------
+    function test_OwnerOf_Reverts_ForNonexistentToken() external {}
 
     // -----------------------
     // STORAGE LAYOUT
