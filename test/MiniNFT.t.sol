@@ -106,16 +106,10 @@ contract MiniNFTTest is Test {
         address receiver = address(this);
         bytes memory receiverEncoded = abi.encode(receiver);
 
-         uint256 balanceBefore = abi.decode(
-            callMiniStrict(selectorBalanceOf, receiverEncoded),
-            (uint256)
-        );
+        uint256 balanceBefore = abi.decode(callMiniStrict(selectorBalanceOf, receiverEncoded), (uint256));
         callMiniStrict(selectorMint, receiverEncoded);
-        
-        uint256 balanceAfter = abi.decode(
-            callMiniStrict(selectorBalanceOf, receiverEncoded),
-            (uint256)
-        );
+
+        uint256 balanceAfter = abi.decode(callMiniStrict(selectorBalanceOf, receiverEncoded), (uint256));
 
         assertEq(balanceAfter, balanceBefore + 1, "mint didn't increment receiver balance!");
     }
@@ -224,34 +218,81 @@ contract MiniNFTTest is Test {
     // -----------------------
     function test_Transfer_RevertsWhenCallerIsNotOwner() external {
         address owner = makeAddr("owner");
+
         callMiniStrict(selectorMint, abi.encode(owner));
-        
         uint256 tokenId = loadSlotValue(deployedMini, slotTotalSupply);
 
+        // we will try to transfer to ourselves (to = notOwner)
         address notOwner = address(this);
+        bytes memory cd = abi.encode(notOwner, tokenId);
 
-        vm.expectRevert(bytes("")); 
-        (bool reverts, ) = callMini(selectorTransfer, abi.encode(notOwner, tokenId));
-        assertTrue(reverts, "ExpectRevert: call did not revert"); 
-
-        // paranoia check
-        address ownerAfterRevert = toAddr(loadSlotValue(deployedMini, (slotOwnersBase + tokenId)));
-        assertEq(ownerAfterRevert, owner);
+        callMiniReverts(selectorTransfer, cd);
     }
 
-    function test_Transfer_UpdatesOwnership() external {
+    function test_Transfer_RevertsWhenReceiverIsZero() external {
         address from = address(this);
-        
+
         callMiniStrict(selectorMint, abi.encode(from));
         uint256 tokenId = loadSlotValue(deployedMini, slotTotalSupply);
 
-        address to = makeAddr("to");
-
+        address to = address(0);
         bytes memory cd = abi.encode(to, tokenId);
+
+        callMiniReverts(selectorTransfer, cd);
+    }
+
+    function test_Transfer_UpdatesOwnership() external {
+        address initialOwner = address(this);
+
+        callMiniStrict(selectorMint, abi.encode(initialOwner));
+        uint256 tokenId = loadSlotValue(deployedMini, slotTotalSupply);
+
+        address newOwner = makeAddr("newOwner");
+
+        bytes memory cd = abi.encode(newOwner, tokenId);
         callMiniStrict(selectorTransfer, cd);
 
-        address ownerAfterTransfer = toAddr(loadSlotValue(deployedMini, (slotOwnersBase + tokenId))); 
-        assertEq(ownerAfterTransfer, to);
+        address actualOwnerAfterTransfer = toAddr(loadSlotValue(deployedMini, (slotOwnersBase + tokenId)));
+        assertEq(actualOwnerAfterTransfer, newOwner);
+    }
+
+    function test_Transfer_UpdatesBalances() external {
+        address from = address(this);
+        address to = makeAddr("to");
+
+        callMiniStrict(selectorMint, abi.encode(from));
+        uint256 tokenId = loadSlotValue(deployedMini, slotTotalSupply);
+
+        // read balances before
+        (uint256 fromBefore, uint256 toBefore) = (
+            abi.decode(callMiniStrict(selectorBalanceOf, abi.encode(from)), (uint256)),
+            abi.decode(callMiniStrict(selectorBalanceOf, abi.encode(to)), (uint256))
+        );
+
+        // execute transfer
+        callMiniStrict(selectorTransfer, abi.encode(to, tokenId));
+
+        // read balances after
+        (uint256 fromAfter, uint256 toAfter) = (
+            abi.decode(callMiniStrict(selectorBalanceOf, abi.encode(from)), (uint256)),
+            abi.decode(callMiniStrict(selectorBalanceOf, abi.encode(to)), (uint256))
+        );
+
+        assertEq(fromAfter, fromBefore - 1, "from balance didn't decrement");
+        assertEq(toAfter, toBefore + 1, "to balance didn't increment");
+    }
+
+    // -----------------------
+    // Storage Slot Matches Function Returns
+    // -----------------------
+    function test_TotalSupply_ReturnsCorrectValue() external {
+        callMiniStrict(selectorMint, abi.encode(address(this)));
+
+        bytes memory ret = callMiniStrict(selectorTotalSupply, abi.encode());
+        uint256 supply = abi.decode(ret, (uint256));
+
+        uint256 raw = loadSlotValue(deployedMini, slotTotalSupply);
+        assertEq(supply, raw, "totalSupply() does not match storage slot!");
     }
 
     // -----------------------
@@ -270,7 +311,7 @@ contract MiniNFTTest is Test {
     // STORAGE LAYOUT
     // -----------------------
     function test_DebugSVGRaw() external {
-        bytes memory ret = callMiniStrict(selectorSVG, abi.encode(""));
+        bytes memory ret = callMiniStrict(selectorSVG, abi.encode());
         // bytes memory ret = callMiniStrict(selectorSVG, abi.encode(1));
 
         console.log("Raw length:", ret.length);
@@ -305,14 +346,15 @@ contract MiniNFTTest is Test {
         require(ok, "call failed");
     }
 
-    /** On low-level calls, `expectRevert` flips reality:
-    *  The returned `bool` no longer means "call succeeded" —
-    *  it means "the expected revert was caught successfully." 💫
-    */
+    /**
+     * On low-level calls, `expectRevert` flips reality:
+     *  The returned `bool` no longer means "call succeeded" —
+     *  it means "the expected revert was caught successfully." 💫
+     */
 
-    function lowLevelCallRevert(bytes4 selector, bytes memory data) public {
+    function callMiniReverts(bytes4 selector, bytes memory data) public {
         vm.expectRevert(bytes(""));
-        (bool revertsAsExpected, ) = deployedMini.call(bytes.concat(selector, data));
+        (bool revertsAsExpected,) = deployedMini.call(bytes.concat(selector, data));
         assertTrue(revertsAsExpected, "expectRevert: call did not revert");
     }
 
@@ -376,5 +418,4 @@ contract MiniNFTTest is Test {
 
         return counter;
     }
-
 }
