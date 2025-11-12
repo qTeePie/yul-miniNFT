@@ -18,7 +18,7 @@
   0x09 - Balances Base
     → stored using the *real* EVM mapping pattern:
     balanceOf[addr] is located at:
-    keccak256( addr , balanacesBaseSlot )
+    keccak256( addr , balancesBaseSlot )
 
   0x10 - Owners Base
     TokenId N is stored at (0x10 + N)
@@ -33,6 +33,14 @@
   ---
 
   🎨 On-chain SVG with dynamic color mode is baked into the bytecode. 
+
+  ---
+
+  🆎 Naming Conventions
+  - **camelCase** for functions - matches Solidity style, keeps ABI-facing stuff familiar.
+  - **snake_case** for low-level ops -> cleaner for EVM internals. 
+
+  Sorry to the purists, I tried to go full snake_case, but it looked ugly to me. 😭 
 
 */
 
@@ -84,7 +92,7 @@ object "MiniNFT" {
       case 0x18160ddd /* totalSupply() */ {
         totalSupply()
       }
-      case 0xa9059cbb /* transfer(uint256, address) */ {
+      case 0xa9059cbb /* transfer(address, uint256) */ {
         transfer(decodeAsAddress(0), decodeAsUint(1))
       }
       // case 0xc87b56dd /* tokenURI(id) */ {
@@ -102,8 +110,8 @@ object "MiniNFT" {
         let supply := sload(slotTotalSupply())
 
         // next tokenId = supply + 1 (not allowing tokenId 0)  
-        let id := add(supply, 1)
-        let o_slot := add(slotOwnersBase(), id)
+        let tokenId := add(supply, 1)
+        let o_slot := add(slotOwnersBase(), tokenId)
 
         // write new owner to mapping
         sstore(o_slot, to)
@@ -121,7 +129,7 @@ object "MiniNFT" {
         sstore(b_slot, b_new)
 
         // increment totalSupply
-        sstore(slotTotalSupply(), id)
+        sstore(slotTotalSupply(), tokenId)
 
         // emit Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
         log4( // ❗ TODO: make generic function for emitting events
@@ -129,14 +137,62 @@ object "MiniNFT" {
           0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, // topic 0: signatureHash 
           0,    // topic 1: newly minted nft => from = address(0) 
           to,   // topic 2: mintedTo
-          id    // topic 3: tokenId
+          tokenId   // topic 3: tokenId
         )
       }
 
-      function transfer(tokenId, to) {
-        // load owner from memory and require owner =  tx.caller
-        let owner := sload(add(slotOwnersBase(), tokenId))
-        if iszero(eq(owner, caller())) { revert(0x00, 0x00) }
+      // MiniNFT does not support marketplace functionality, so we don't need to pass `from`
+      function transfer(to, tokenId) {
+        // load current owner from memory and require owner =  tx.caller
+        let o_slot := add(slotOwnersBase(), tokenId)
+        let from := sload(o_slot)
+
+        if iszero(eq(from, caller())) { revert(0x00, 0x00) }
+
+        // set new owner
+        sstore(o_slot, to)
+
+        // increase / decrease balances of `from` & `to`
+        // balanceOf is the real deal EVM mapping style keccak256(key, base)
+        // but we cannot pass key and base directly, we need to load them to memory
+        // and then pass that memory segment to keccak256
+
+        /* INCREASE `to` */
+        // 1. load addr `to` to memory
+        // 2. load balancesBase slot to memory
+        // 3. hash this memory segment with keccak256
+        let ptr := mload(0x40) // good practice
+
+        mstore(ptr, to)
+        mstore(add(ptr, 0x20), slotBalancesBase())
+
+        // get the slot and load the balances of `to` before transfer
+        let b_slot_to := keccak256(ptr, 0x40)
+        let b_to_before := sload(b_slot_to) 
+
+        // increment the balance + save to storage
+        let b_to_after := add(b_to_before, 1)
+        sstore(b_slot_to, b_to_after)
+
+        /* DECREASE `from` */
+        // since we already stored balancesBase to memory, lets save some gas
+        // and instead of loading it again, we'll overwrite whats `to` addr (at ptr)
+        mstore(ptr, from)
+
+        let b_slot_from := keccak256(ptr, 0x40)
+        let b_from_before := sload(b_slot_from)
+        
+        let b_from_after := sub(b_from_before, 1)
+        sstore(b_slot_from, b_from_after)
+
+        // emit transfer
+        log4( // ❗ TODO: make generic function for emitting events
+          0x00, 0x00,   // no data payload
+          0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, // topic 0: signatureHash 
+          from,    // topic 1: from 
+          to,   // topic 2: to
+          tokenId    // topic 3: tokenId
+        )
 
       }
 
