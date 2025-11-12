@@ -1,22 +1,30 @@
 /*
-  📝 Note: this contract intentionally **does not** follow the ERC-721 standard".
+  📝 Note: this contract intentionally **does not** follow the ERC-721 standard" 
 
   📚 Educational Yul Demo 📚 
 
   - Free-mint NFT
-  - No max supply 
+  - Max supply 2^240
   - Not ERC-721 compliant (no EIP-165, no safeTransfer, raw SVG, etc.)
   - Cannot be sold through marketplace, only minted and transferred
   - Focus is on exploring the EVM, not production rules
+  - BitPack FunTime
 
   ---
 
   🔍 Storage layout:
     
   0x00 - TotalSupply
+    32 bits reserved for flags => max cap is 2^224
+    Lets bitpack totalSupply with something fun:
+      - First bit of totalSupply will be flag for pause / resume
+      - Next 8 bits will be the suffix of whatever address initialized MiniNFT
+        Any address that shares the same 8 LSB as initializor, has authority 😈
+        These *cosmic siblings* can do pause / resume mint + any future "onlyOwner" stuff
+        [ 1 bit pausedFlag | 8 bits suffixAuthority | Rest ]
   
   0x09 - Balances Base
-    → stored using the *real* EVM mapping pattern:
+    Stored using the *real* EVM mapping pattern:
     balanceOf[addr] is located at:
     keccak256( addr , balancesBaseSlot )
 
@@ -24,6 +32,8 @@
     TokenId N is stored at (0x10 + N)
     Not real mapping layout - a simplified, linear style mapping 
     Linear style mapping is possible because of the tokenId (distance from base)
+    + owner address' are bitpacked with the related NFT' active color!
+    [ 2 bit color  |  94 bit padding  |  160 bit address ]
 
   🟢 *Balances* is how Solidity stores mappings internally.
   🔴 *Owners* stores items sequentially in memory
@@ -40,19 +50,15 @@
   - **camelCase** for functions - matches Solidity style, keeps ABI-facing stuff familiar.
   - **snake_case** for low-level ops / variables. 
 
-  Sorry to the purists, I tried to go full snake_case, but it looked strange to me.  
+  Sorry to the purists, I tried to go full snake_case, but it looked weird to me.  
 
 */
-
-// ❗ TODO: So much unused stuff in TotalSupply
-// => Pack flags and supply into slot 0x00 
-// [  1 bit mintPaused | 200 bits empty | 32bits TotalSupply ]
 
 // ❗ TODO: some cool revert function that returns some hardcoded "failed because ABC" ?
 // ❗ Fuzz test the sequential owners mapping and keccak(address, uint256) balanceof never ever ever colliding
 
-// ❗ TODO: i want color for nft so ill do a mode bitpacked with the 256-bit storage slot
-//  [  2 bit color   |      94 bits empty     |   160 bits address   ] 
+// ❗ TODO: i want color for nft so ill bitpack owners:
+//  [ 2 bit color  |  94 bit padding  |  160 bit address ] 
 
 object "MiniNFT" {
 
@@ -102,6 +108,10 @@ object "MiniNFT" {
       // --- external interactions ---
       function mint(to) {
         if iszero(to) { revert(0x00, 0x00) } // no address found
+
+        // color to-be bitpacked
+        let color := 1
+        let color_ls := shl(254, color) // left shift => fills lower 254 bits with zeros
 
         // load current supply
         let supply := sload(slotTotalSupply())
@@ -296,6 +306,12 @@ object "MiniNFT" {
 
       function slotBalancesBase() -> slot {
         slot := 0x09
+      }
+
+      // Unpack owner address
+      // [ 2 bit color ][ 94 bit padding ][ 160 bit address ]
+      function unpackOwnership(packed) -> owner {
+
       }
 
       // --- utility ---
