@@ -23,7 +23,6 @@ contract MiniNFTTest is Test {
     bytes4 selectorSVG = bytes4(keccak256("svg(uint256)"));
     bytes4 selectorColorOf = bytes4(keccak256("colorOf(uint256)"));
 
-
     // -----------------------
     // SETUP
     // -----------------------
@@ -209,13 +208,13 @@ contract MiniNFTTest is Test {
     // -----------------------
     // MINT AND TRANSFER HELPER
     // -----------------------
-    
+
     function test_MintAndTransfer_WorksCorrectly() external {
         address currentOwner = address(this);
         address newOwner = makeAddr("newOwner");
-        
+
         uint256 tokenId = mintAndTransfer(currentOwner, newOwner);
-        
+
         address actualOwner = getOwnerOf(tokenId);
         assertEq(actualOwner, newOwner, "token should be owned by newOwner");
     }
@@ -269,11 +268,11 @@ contract MiniNFTTest is Test {
 
     function test_Transfer_EmitsTransferEvent() external {
         address recipient = makeAddr("recipient");
-        
+
         // Setup: mint first
         callMiniStrict(selectorMint, abi.encode(address(this)));
         uint256 tokenId = loadSlotValue(deployedMini, slotTotalSupply);
-        
+
         // Test: just the transfer event
         bytes32 sig = keccak256("Transfer(address,address,uint256)");
         vm.recordLogs();
@@ -315,13 +314,13 @@ contract MiniNFTTest is Test {
         address owner = address(this);
         callMiniStrict(selectorMint, abi.encode(owner));
         uint256 tokenId = getTotalSupply();
-        
-        uint256 newColor = packRGB(255, 128, 64); // Orange color
+
+        uint256 newColor = packRGB(255, 128, 64);
         setColorOf(tokenId, newColor);
-        
+
         uint256 actualColor = getColorOf(tokenId);
         assertEq(actualColor, newColor, "Color was not set correctly");
-        
+
         (uint8 r, uint8 g, uint8 b) = unpackRGB(actualColor);
         assertEq(r, 255, "Red component incorrect");
         assertEq(g, 128, "Green component incorrect");
@@ -348,7 +347,7 @@ contract MiniNFTTest is Test {
 
         uint256 supply = getTotalSupply();
         uint256 raw = loadSlotValue(deployedMini, slotTotalSupply);
-        
+
         assertEq(supply, raw, "totalSupply() does not match storage slot!");
     }
 
@@ -391,7 +390,7 @@ contract MiniNFTTest is Test {
         }
         return -1;
     }
-    
+
     // --- WRITE MINI HELPERS ---
 
     /// Helper: Mints to `from` then immediately transfers to `to`
@@ -417,10 +416,11 @@ contract MiniNFTTest is Test {
 
     /// Helper: Packs RGB values into a single uint256
     function packRGB(uint8 r, uint8 g, uint8 b) internal pure returns (uint256) {
-        uint256 redBits = r << 16;
-        uint256 greenBits = g << 8;
-        uint256 blueBits = b;
-        return redBits | greenBits | blueBits; 
+        uint256 redBits = uint256(r) << 16;
+        uint256 greenBits = uint256(g) << 8;
+        uint256 blueBits = uint256(b);
+
+        return redBits | greenBits | blueBits;
     }
 
     /// Helper: Unpacks RGB values from a uint256
