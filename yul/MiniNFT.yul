@@ -61,10 +61,6 @@
 
 // ❗ TODO: some cool revert function that returns some hardcoded "failed because ABC" ?
 // ❗ Fuzz test the sequential owners mapping and keccak(address, uint256) balanceof never ever ever colliding
-
-// ❗ TODO: i want color for nft so ill bitpack owners:
-//  [ 1 byte color  |  94 bit padding  |  160 bit address ] 
-
 object "MiniNFT" {
 
   // top `code` block is the constructor for MiniNFT
@@ -96,7 +92,7 @@ object "MiniNFT" {
         let g := and(calldataload(36), 0xff)
         let b := and(calldataload(68), 0xff)
 
-        // mintWithColor(decodeAsAddress(0), r, g, b)
+        mintWithColor(decodeAsAddress(0), r, g, b)
       }
       case 0xa9059cbb /* transfer(address,uint256) */ {
         transfer(decodeAsAddress(0), decodeAsUint(1))
@@ -118,18 +114,36 @@ object "MiniNFT" {
       }
 
       // --- external interactions ---
-      /*
       function mintWithColor(to, r, g, b) {
-        r := 0
-        g := 0;
+        mint(to)
+        
+        let token_id := sload(slotTotalSupply())
+        
+        setColor(token_id, r, g, b)
+      }
+      
 
-        // mint
-        // setcolor()
+      function setColor(token_id, r, g, b) {
+        let slot := add(slotOwnersBase(), token_id)
+        let packed := sload(slot)
+
+        let owner := unpackOwner(packed)
+        if iszero(eq(owner, caller())) { revert(0x00, 0x00) }
+
+        let rgb := concatrgb(r, g, b)
+        let rgb_ls := shl(232, rgb)
+
+        packed := or(rgb_ls, owner) // no other bitpacking in these slots per today, so this overwrite works
+        sstore(slot, packed)
+
       }
 
-      function setColor(id, r, g, b) {
-
-      }*/
+      function concatrgb(r, g, b) -> rgb {
+        let r_ls := shl(16, r) // RR0000
+        let g_ls := shl(8, g) // 00GG00
+        
+        rgb :=  or(or(r_ls, g_ls), b) // RRGGBB 
+      }
 
       function mint(to) {
         if iszero(to) { revert(0x00, 0x00) } // no address found
@@ -187,6 +201,7 @@ object "MiniNFT" {
       } 
 
       // MiniNFT does not support marketplace functionality, so we don't need to pass `from`
+      // ❗ TODO: make the color not be whiped at transfer
       function transfer(to, token_id) {
         // assert params are not 0
         if iszero(token_id) { revert(0x00, 0x00) }
@@ -194,14 +209,19 @@ object "MiniNFT" {
 
         // load current owner from memory and require owner =  tx.caller
         let o_slot := add(slotOwnersBase(), token_id)
-        let f_packed := sload(o_slot) // from packed
+        let f_packed := sload(o_slot) // from packed ( color rgb is bitpacked with owner )
 
-        let from := unpackOwner(f_packed) // unpack owner
-
+        // unpack owner and assert caller is owner
+        let from := unpackOwner(f_packed)
         if iszero(eq(from, caller())) { revert(0x00, 0x00) }
 
+        // unpack color and pack with `to` address
+        let msb24_mask := shl(232, 0xffffff)
+        let rgb := and(f_packed, msb24_mask)
+        let t_packed := or(rgb, to)
+
         // set new owner
-        sstore(o_slot, to)
+        sstore(o_slot, t_packed)
 
         // update balances 
         // balances is the real deal EVM mapping style keccak256(key, base)
@@ -295,7 +315,7 @@ object "MiniNFT" {
         let b := unpackBlue(packed)
 
         // R, G, B are converted to 2 byte HEX  => combined size is 2 * 3 = 6 bytes 
-        let rbg_s := 6
+        let rgb_s := 6
 
         // size and offset of HEAD and TAIL
         let h := dataoffset("SVG_HEAD")
@@ -303,22 +323,22 @@ object "MiniNFT" {
         let t := dataoffset("SVG_TAIL")
         let ts := datasize("SVG_TAIL")
 
-        // SVG_HEAD  +  rbg size (hex)  +  SVG_TAIL 
-        let size := add(add(0x40, hs), add(rbg_s, ts))
+        // SVG_HEAD  +  rgb size (hex)  +  SVG_TAIL 
+        let size := add(add(0x40, hs), add(rgb_s, ts))
 
         let ptr := mload(0x40) // good practice when we use memory before return 
         mstore(0x40, add(ptr, size)) // reserving our slots 
 
         // Allocate ABI wrapper
         mstore(ptr, 0x20) // offset
-        mstore(add(ptr, 0x20), add(add(hs, rbg_s), ts))
+        mstore(add(ptr, 0x20), add(add(hs, rgb_s), ts))
 
         let data_ptr := add(ptr, 0x40)
 
         // COPY HEAD
         datacopy(data_ptr, h, hs)
 
-        // write RBG to memory 
+        // write rgb to memory 
         let colorPtr := add(data_ptr, hs)
 
         writeByteAsHex(r, colorPtr)
@@ -326,7 +346,7 @@ object "MiniNFT" {
         writeByteAsHex(b, add(colorPtr, 4))
 
         // COPY TAIL
-        datacopy(add(add(data_ptr, hs), rbg_s), t, ts)
+        datacopy(add(add(data_ptr, hs), rgb_s), t, ts)
 
         return(ptr, size)
       }
@@ -402,7 +422,7 @@ object "MiniNFT" {
       }
 
       // --- unpacking ---
-      // ❗ NOTE: all unpacking functions expect whole packed obj color + address as param
+      // ❕ NOTE: all unpacking functions expect the whole packed obj ( color ++ address ) as input
 
       // Apply 20-byte mask to unpack owner
       function unpackOwner(packed) -> owner {
@@ -411,22 +431,22 @@ object "MiniNFT" {
       }
 
       function unpackRed(packed) -> r {
-        let rgb := unpackConcatRBG(packed)
+        let rgb := unpackRGB24(packed)
         r := shr(16, rgb)
       }
 
       function unpackGreen(packed) -> g {
-        let rgb := unpackConcatRBG(packed)
+        let rgb := unpackRGB24(packed)
         g := and(shr(8, rgb), 0xff)
       }
 
       function unpackBlue(packed) -> b {
-        let rgb := unpackConcatRBG(packed)
+        let rgb := unpackRGB24(packed)
         b := and(rgb, 0xff)
       }
 
       // shift right by 232 => returns 3 MSBytes (R, G, B)
-      function unpackConcatRBG(packed) -> rgb {
+      function unpackRGB24(packed) -> rgb {
         rgb := shr(232, packed)
       }
 
